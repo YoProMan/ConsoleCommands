@@ -376,6 +376,9 @@ local commands = {
 	[";fly"] = function(args)
 		startFly()
 	end,
+	[";speed"] = function(args)
+		plr.Character.Humanoid.WalkSpeed = args[1]
+	end,
 }
 
 function CreateNotification(title, desc)
