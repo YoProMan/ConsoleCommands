@@ -312,17 +312,6 @@ local function stopFly()
 	runService:UnbindFromRenderStep("FlyMovement")
 end
 
-uis.InputBegan:Connect(function(input, processed)
-	if processed then return end
-	if input.KeyCode == Enum.KeyCode.F then
-		if not flying then
-			startFly()
-		else
-			stopFly()
-		end
-	end
-end)
-
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
