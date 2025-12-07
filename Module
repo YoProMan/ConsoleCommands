@@ -257,18 +257,18 @@ local espon2 = false
 local neighfroze = false
 
 local commands = {
-	["neighborsize"] = function(args)
+	[";neighborsize"] = function(args)
 		ScaleNeighbor(args[1])
 	end,
-	["itemesp"] = function(args)
+	[";itemesp"] = function(args)
 		espon = not espon
 		ToggleItemESP(espon)
 	end,
-	["neighboresp"] = function(args)
+	[";neighboresp"] = function(args)
 		espon2 = not espon2
 		ToggleNeighborESP(espon2)
 	end,
-	["giveitem"] = function(args)
+	[";giveitem"] = function(args)
 		local item = ""
 		for i, str in pairs(args) do
 			item = item..str
@@ -276,10 +276,10 @@ local commands = {
 		
 		GiveItem(GetAllKeys()[item])
 	end,
-	["breakai"] = function(args)
+	[";breakai"] = function(args)
 		BreakAI()
 	end,
-	["freezeneighbor"] = function(args)
+	[";freezeneighbor"] = function(args)
 		neighfroze = not neighfroze
 		workspace.Neighbor.Neighbor.RootPart.Anchored = neighfroze
 	end,
