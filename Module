@@ -262,6 +262,14 @@ uis.InputEnded:Connect(function(input, processed)
 	end
 end)
 
+local function noclip(character)
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CanCollide = false
+		end
+	end
+end
+
 local function startFly()
 	local character = player.Character
 	if not character then return end
@@ -270,7 +278,6 @@ local function startFly()
 
 	flying = true
 	hrp.Anchored = false
-	hrp.CanCollide = false
 
 	bodyVelocity = Instance.new("BodyVelocity")
 	bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5)
@@ -279,6 +286,9 @@ local function startFly()
 
 	runService:BindToRenderStep("FlyMovement", Enum.RenderPriority.Character.Value, function()
 		if not flying or not hrp then return end
+
+		noclip(character)
+
 		local cam = workspace.CurrentCamera
 		local moveVec = Vector3.new(0,0,0)
 
@@ -304,11 +314,17 @@ local function stopFly()
 	if not hrp then return end
 
 	flying = false
-	hrp.CanCollide = true
 	if bodyVelocity then
 		bodyVelocity:Destroy()
 		bodyVelocity = nil
 	end
+
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CanCollide = true
+		end
+	end
+
 	runService:UnbindFromRenderStep("FlyMovement")
 end
 
