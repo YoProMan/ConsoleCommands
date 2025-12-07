@@ -248,6 +248,7 @@ local flying = false
 local speed = 50
 local bodyVelocity
 local keysDown = {}
+local originalCanCollide = {}
 
 uis.InputBegan:Connect(function(input, processed)
 	if processed then return end
@@ -262,14 +263,6 @@ uis.InputEnded:Connect(function(input, processed)
 	end
 end)
 
-local function noclip(character)
-	for _, part in ipairs(character:GetDescendants()) do
-		if part:IsA("BasePart") then
-			part.CanCollide = false
-		end
-	end
-end
-
 local function startFly()
 	local character = player.Character
 	if not character then return end
@@ -279,6 +272,15 @@ local function startFly()
 	flying = true
 	hrp.Anchored = false
 
+	-- Save original CanCollide states
+	originalCanCollide = {}
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			originalCanCollide[part] = part.CanCollide
+			part.CanCollide = false
+		end
+	end
+
 	bodyVelocity = Instance.new("BodyVelocity")
 	bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5)
 	bodyVelocity.Velocity = Vector3.new(0,0,0)
@@ -286,8 +288,6 @@ local function startFly()
 
 	runService:BindToRenderStep("FlyMovement", Enum.RenderPriority.Character.Value, function()
 		if not flying or not hrp then return end
-
-		noclip(character)
 
 		local cam = workspace.CurrentCamera
 		local moveVec = Vector3.new(0,0,0)
@@ -319,11 +319,13 @@ local function stopFly()
 		bodyVelocity = nil
 	end
 
-	for _, part in ipairs(character:GetDescendants()) do
-		if part:IsA("BasePart") then
-			part.CanCollide = true
+	-- Restore original CanCollide states
+	for part, canCollide in pairs(originalCanCollide) do
+		if part and part.Parent then
+			part.CanCollide = canCollide
 		end
 	end
+	originalCanCollide = {}
 
 	runService:UnbindFromRenderStep("FlyMovement")
 end
