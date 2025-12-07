@@ -1,0 +1,450 @@
+local module = {}
+
+-- HN Dependencies (may error)
+local function safeGetCollisionGroup(part)
+	local ok, value = pcall(function()
+		return part.CollisionGroup
+	end)
+	if not ok then
+		return nil
+	end
+	return value
+end
+
+
+local function getStringPath(path)
+	local current = game
+	for name in string.gmatch(path, "[^.]+") do
+		current = current:FindFirstChild(name)
+		if not current then
+			return nil -- path invalid
+		end
+	end
+	return current
+end
+
+function GetDoorState(door)
+	if not door:FindFirstChild("Door") then return end
+
+	if door.Door:FindFirstChild("MovePart") then
+		return door.Door.MovePart.Value.Value == 1
+	end
+
+	local group = safeGetCollisionGroup(door.Door.Door)
+	if group == nil then return end
+
+	return group == "Doors"
+end
+
+function InteractWithDoor(door)
+	if not door:FindFirstChild("Door") then return end
+
+	local doorFunctions = door.Door.BP
+	doorFunctions.Interact:Fire()
+end
+
+function UnlockDoor(door)
+	if not door:FindFirstChild("Door") then return end
+	if not door.Locks:FindFirstChildWhichIsA("Instance") then return end
+
+	local doorFunctions = door.Locks:FindFirstChildWhichIsA("Instance").BP
+	doorFunctions.Lock.Unlock:Invoke()
+	doorFunctions.Lock.Unlocked:Fire()
+end
+
+local autocorrections = {
+	["nail"] = "crowbar",
+	["car"] = "car key",
+	["white"] = "white key",
+	["yellow"] = "yellow key",
+	["blue"] = "blue key",
+	["wood_key"] = "brown key",
+}
+
+local neighborColor = Color3.fromRGB(255, 0, 0)
+local itemColor = Color3.fromRGB(0, 255, 0)
+
+function GetAllKeys()
+	local descendants = workspace:GetDescendants()
+	local keys = {}
+	local keyslen = 0
+
+	for i, v in pairs(descendants) do
+		if v:FindFirstChild("BP") and v.BP:FindFirstChild("Interact") and v:FindFirstChild("Code") then
+			local val = v.Code.Value or v.Name
+			if autocorrections[val] then val = autocorrections[val] end
+			print("Potential Key Found, key: "..val)
+			keys[val] = v
+			keyslen += 1
+		end
+	end
+
+	print("Found "..keyslen.." keys in workspace.")
+	return keys
+end
+function GetKeyNames()
+	local descendants = workspace:GetDescendants()
+	local keys = {}
+	local keyslen = 0
+
+	for i, v in pairs(descendants) do
+		if v:FindFirstChild("BP") and v.BP:FindFirstChild("Interact") and v:FindFirstChild("Code") then
+			local val = v:FindFirstChild("Code").Value or v.Name
+			if autocorrections[val] then val = autocorrections[val] end
+			print("Potential Key Found, key: "..val)
+			table.insert(keys, val)
+			keyslen += 1
+		end
+	end
+
+	print("Found "..keyslen.." keys in workspace.")
+	return keys
+end
+
+function GiveItem(item)
+	if item:FindFirstChild("_link") then
+		item.Parent = game.Players.LocalPlayer.Backpack
+	else
+		warn("Invalid Item Given")
+	end
+end
+
+function ToggleNeighborESP(v)
+	local neighbor = workspace.Neighbor.Neighbor
+	if neighbor then
+		if v then
+			for i, v in pairs(neighbor:GetChildren()) do
+				local highlight = Instance.new("Highlight")
+				highlight.FillColor = neighborColor
+				highlight.OutlineTransparency = 1
+				highlight.Parent = v
+
+				task.spawn(function()
+					while task.wait() do
+						highlight.FillColor = neighborColor
+					end
+				end)
+			end
+		else
+			for i, v in pairs(neighbor:GetChildren()) do
+				if v:FindFirstChild("Highlight") then v:FindFirstChild("Highlight"):Destroy() end
+			end
+		end
+	end
+end
+
+function BreakAI(v)
+	local neighbor = workspace.Neighbor.Neighbor
+	local collision = neighbor.Collision
+	local collisionbig = neighbor.CollisionBig
+
+	collision.Parent = game.ReplicatedStorage
+	collisionbig.Parent = game.ReplicatedStorage
+end
+
+function ToggleItemESP(v)
+	local items = GetAllKeys()
+	if items then
+		if v then
+			for i, v in pairs(items) do
+				print(v.Name)
+				print(i)
+
+				local highlight = Instance.new("Highlight")
+				highlight.FillColor = itemColor
+				highlight.OutlineTransparency = 1
+				highlight.Parent = v
+
+				local billboard = Instance.new("BillboardGui")
+				billboard.Parent = v
+				billboard.AlwaysOnTop = true
+				billboard.Active = true
+				billboard.Adornee = v
+				billboard.Size = UDim2.new(0, 1000, 0, 1000)
+				local label = Instance.new("TextLabel")
+				label.Parent = billboard
+				label.BackgroundTransparency = 1
+				label.Text = i
+				label.Size = UDim2.new(0, 1000, 0, 1000)
+				label.TextColor = BrickColor.new("White")
+
+				task.spawn(function()
+					while task.wait() do
+						highlight.FillColor = itemColor
+						if highlight.Parent.Parent == game.Players.LocalPlayer.Backpack then
+							highlight.Enabled = false
+							billboard.Enabled = false
+						else
+							highlight.Enabled = true
+							billboard.Enabled = true
+						end
+					end
+				end)
+			end
+		else
+			for i, v in pairs(items) do if v:FindFirstChild("Highlight") then v:FindFirstChild("Highlight"):Destroy() end end
+			for i, v in pairs(items) do if v:FindFirstChild("BillboardGui") then v:FindFirstChild("BillboardGui"):Destroy() end end
+		end
+	end
+end
+
+local function ScaleNeighbor(scale)
+	local character = workspace.Neighbor.Neighbor
+	local hrp = character:WaitForChild("HumanoidRootPart")
+
+	if not character:GetAttribute("HasOriginalScale") then
+		for _, obj in ipairs(character:GetDescendants()) do
+			if obj:IsA("BasePart") then
+				obj:SetAttribute("OrigSize", obj.Size)
+				obj:SetAttribute("OrigPosOffset", hrp.CFrame:PointToObjectSpace(obj.Position))
+			elseif obj:IsA("SpecialMesh") then
+				obj:SetAttribute("OrigMeshScale", obj.Scale)
+			elseif obj:IsA("Attachment") then
+				obj:SetAttribute("OrigAttachPos", obj.Position)
+			elseif obj:IsA("Motor6D") or obj:IsA("Weld") then
+				obj:SetAttribute("OrigC0", obj.C0)
+				obj:SetAttribute("OrigC1", obj.C1)
+			end
+		end
+		character:SetAttribute("HasOriginalScale", true)
+	end
+
+	local hrpCF = hrp.CFrame
+
+	for _, obj in ipairs(character:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			local origSize = obj:GetAttribute("OrigSize")
+			local origOffset = obj:GetAttribute("OrigPosOffset")
+			if origSize and origOffset then
+				obj.Size = origSize * scale
+				obj.CFrame = hrpCF * CFrame.new(origOffset * scale)
+			end
+		elseif obj:IsA("SpecialMesh") then
+			local orig = obj:GetAttribute("OrigMeshScale")
+			if orig then obj.Scale = orig * scale end
+		elseif obj:IsA("Attachment") then
+			local orig = obj:GetAttribute("OrigAttachPos")
+			if orig then obj.Position = orig * scale end
+		elseif obj:IsA("Motor6D") or obj:IsA("Weld") then
+			local origC0 = obj:GetAttribute("OrigC0")
+			local origC1 = obj:GetAttribute("OrigC1")
+			if origC0 and origC1 then
+				local p0 = origC0.Position * scale
+				local p1 = origC1.Position * scale
+				local x0, y0, z0 = origC0:ToEulerAnglesXYZ()
+				local x1, y1, z1 = origC1:ToEulerAnglesXYZ()
+				obj.C0 = CFrame.new(p0) * CFrame.fromEulerAnglesXYZ(x0, y0, z0)
+				obj.C1 = CFrame.new(p1) * CFrame.fromEulerAnglesXYZ(x1, y1, z1)
+			end
+		end
+	end
+end
+
+
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local InputBox = nil
+local NotificationsFrame = nil
+local PlaceholderNotification = nil
+
+local plr = game.Players.LocalPlayer
+
+local keybind = Enum.KeyCode.Semicolon
+
+local espon = false
+local espon2 = false
+local neighfroze = false
+
+local commands = {
+	["neighborsize"] = function(args)
+		ScaleNeighbor(args[1])
+	end,
+	["itemesp"] = function(args)
+		espon = not espon
+		ToggleItemESP(espon)
+	end,
+	["neighboresp"] = function(args)
+		espon2 = not espon2
+		ToggleNeighborESP(espon2)
+	end,
+	["giveitem"] = function(args)
+		local item = ""
+		for i, str in pairs(args) do
+			item = item..str
+		end
+		
+		GiveItem(GetAllKeys()[item])
+	end,
+	["breakai"] = function(args)
+		BreakAI()
+	end,
+	["freezeneighbor"] = function(args)
+		neighfroze = not neighfroze
+		workspace.Neighbor.Neighbor.RootPart.Anchored = neighfroze
+	end,
+}
+
+function CreateNotification(title, desc)
+	local noti = PlaceholderNotification:Clone()
+	noti.Name = title
+	noti.Title.Text = title
+	noti.Description.Text = desc
+	noti.Visible = true
+	noti.Parent = NotificationsFrame
+	
+	task.delay(2, function()
+		local dti = TweenInfo.new(
+			0.5,
+			Enum.EasingStyle.Quad,
+			Enum.EasingDirection.Out
+		)
+		local tween = TweenService:Create(noti, dti, {Transparency = 1})
+		tween:Play()
+		tween.Completed:Wait()
+		noti:Destroy()
+	end)
+end
+
+function LoadUI()
+	local ConsoleCommands = Instance.new("ScreenGui")
+	ConsoleCommands.Name = "ConsoleCommands"
+	ConsoleCommands.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	ConsoleCommands.Parent = plr.PlayerGui
+
+	local Input = Instance.new("Frame")
+	Input.Name = "Input"
+	Input.Size = UDim2.new(1.00, 0.00, 0.05, 0.00)
+	Input.BorderColor3 = Color3.new(0.00, 0.00, 0.00)
+	Input.Position = UDim2.new(0.00, 0.00, 0.95, 0.00)
+	Input.BorderSizePixel = 0
+	Input.BackgroundTransparency = 0.5
+	Input.BackgroundColor3 = Color3.new(0.00, 0.00, 0.00)
+	Input.Parent = ConsoleCommands
+	Input.Visible = false
+
+	InputBox = Instance.new("TextBox")
+	InputBox.Name = "InputBox"
+	InputBox.TextWrapped = true
+	InputBox.BorderSizePixel = 0
+	InputBox.TextScaled = true
+	InputBox.BackgroundColor3 = Color3.new(1.00, 1.00, 1.00)
+	InputBox.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+	InputBox.TextSize = 14
+	InputBox.Size = UDim2.new(1.00, 0.00, 1.00, 0.00)
+	InputBox.TextDirection = Enum.TextDirection.LeftToRight
+	InputBox.TextColor3 = Color3.new(1.00, 1.00, 1.00)
+	InputBox.BorderColor3 = Color3.new(0.00, 0.00, 0.00)
+	InputBox.Text = ""
+	InputBox.TextXAlignment = Enum.TextXAlignment.Left
+	InputBox.BackgroundTransparency = 1
+	InputBox.Position = UDim2.new(0.00, 0.00, 0.00, 0.00)
+	InputBox.Parent = Input
+
+	local Notifications = Instance.new("Frame")
+	Notifications.Name = "Notifications"
+	Notifications.Size = UDim2.new(0.21, 0.00, 0.99, 0.00)
+	Notifications.BorderColor3 = Color3.new(0.00, 0.00, 0.00)
+	Notifications.Position = UDim2.new(0.79, 0.00, 0.01, 0.00)
+	Notifications.BorderSizePixel = 0
+	Notifications.BackgroundTransparency = 1
+	Notifications.BackgroundColor3 = Color3.new(1.00, 1.00, 1.00)
+	Notifications.Parent = ConsoleCommands
+	NotificationsFrame = Notifications
+
+	local UIListLayout = Instance.new("UIListLayout")
+	UIListLayout.Padding = UDim.new(0.00, 10.00)
+	UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	UIListLayout.Parent = Notifications
+
+	local Placeholder = Instance.new("Frame")
+	Placeholder.Name = "Placeholder"
+	Placeholder.Visible = false
+	Placeholder.Size = UDim2.new(0.98, 0.00, 0.12, 0.00)
+	Placeholder.BorderColor3 = Color3.new(0.00, 0.00, 0.00)
+	Placeholder.Position = UDim2.new(0.01, 0.00, 0.01, 0.00)
+	Placeholder.BorderSizePixel = 0
+	Placeholder.BackgroundTransparency = 0.5
+	Placeholder.BackgroundColor3 = Color3.new(0.00, 0.00, 0.00)
+	Placeholder.Parent = Notifications
+	PlaceholderNotification = Placeholder
+
+	local UICorner = Instance.new("UICorner")
+	UICorner.CornerRadius = UDim.new(0.00, 10.00)
+	UICorner.Parent = Placeholder
+
+	local Title = Instance.new("TextLabel")
+	Title.Name = "Title"
+	Title.TextWrapped = true
+	Title.BorderSizePixel = 0
+	Title.TextScaled = true
+	Title.BackgroundColor3 = Color3.new(1.00, 1.00, 1.00)
+	Title.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+	Title.TextXAlignment = Enum.TextXAlignment.Left
+	Title.TextSize = 14
+	Title.Size = UDim2.new(0.58, 0.00, 0.44, 0.00)
+	Title.BorderColor3 = Color3.new(0.00, 0.00, 0.00)
+	Title.Text = "Title"
+	Title.TextColor3 = Color3.new(1.00, 1.00, 1.00)
+	Title.BackgroundTransparency = 1
+	Title.Position = UDim2.new(0.02, 0.00, 0.00, 0.00)
+	Title.Parent = Placeholder
+
+	local Description = Instance.new("TextLabel")
+	Description.Name = "Description"
+	Description.TextWrapped = true
+	Description.BorderSizePixel = 0
+	Description.TextYAlignment = Enum.TextYAlignment.Bottom
+	Description.BackgroundColor3 = Color3.new(1.00, 1.00, 1.00)
+	Description.FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+	Description.TextDirection = Enum.TextDirection.LeftToRight
+	Description.TextXAlignment = Enum.TextXAlignment.Right
+	Description.TextScaled = true
+	Description.Size = UDim2.new(1.00, 0.00, 1.00, 0.00)
+	Description.BorderColor3 = Color3.new(0.00, 0.00, 0.00)
+	Description.Text = "Successfully executed."
+	Description.TextColor3 = Color3.new(1.00, 1.00, 1.00)
+	Description.BackgroundTransparency = 1
+	Description.Parent = Placeholder
+end
+
+function BindFunctionToKeybind(key, func)
+	UserInputService.InputBegan:Connect(function(inp, proc)
+		if proc then return end
+		if inp.KeyCode == key then
+			func()
+		end
+	end)
+end
+
+function module.Run(options)
+	if options==nil then return end
+	
+	LoadUI()
+	BindFunctionToKeybind(keybind, function()
+		local on = InputBox.Parent.Visible
+		if on then
+			InputBox.Parent.Visible = false
+		else
+			InputBox.Parent.Visible = true
+			InputBox:CaptureFocus()
+		end
+	end)
+	InputBox.FocusLost:Connect(function()
+		InputBox.Parent.Visible = false
+		local cmd = InputBox.Text
+		local args = string.split(cmd, " ")
+		local cmd = args[1]
+		table.remove(args, 1)
+		InputBox.Text = ""
+		
+		local funct = commands[cmd]
+		if not funct then
+			CreateNotification("Error!", "Invalid command "..cmd.." entered. Please try entering an actual command.")
+		else
+			funct(args)
+		end
+	end)
+end
+
+return module
