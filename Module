@@ -280,8 +280,10 @@ local commands = {
 		BreakAI()
 	end,
 	[";freezeneighbor"] = function(args)
-		neighfroze = not neighfroze
-		workspace.Neighbor.Neighbor.RootPart.Anchored = neighfroze
+		workspace.Neighbor.Neighbor.RootPart.Anchored = true
+	end,
+	[";unfreezeneighbor"] = function(args)
+		workspace.Neighbor.Neighbor.RootPart.Anchored = false
 	end,
 }
 
@@ -434,7 +436,8 @@ function module.Run(options)
 		InputBox.Parent.Visible = false
 		local cmd = InputBox.Text
 		local args = string.split(cmd, " ")
-		local cmd = args[1]
+		cmd = args[1]
+		print(cmd)
 		table.remove(args, 1)
 		InputBox.Text = ""
 		
