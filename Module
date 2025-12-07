@@ -246,10 +246,7 @@ local runService = game:GetService("RunService")
 
 local flying = false
 local speed = 50
-local velocity = Vector3.new(0,0,0)
 local bodyVelocity
-local moveDirection = Vector3.new(0,0,0)
-
 local keysDown = {}
 
 uis.InputBegan:Connect(function(input, processed)
@@ -314,6 +311,17 @@ local function stopFly()
 	end
 	runService:UnbindFromRenderStep("FlyMovement")
 end
+
+uis.InputBegan:Connect(function(input, processed)
+	if processed then return end
+	if input.KeyCode == Enum.KeyCode.F then
+		if not flying then
+			startFly()
+		else
+			stopFly()
+		end
+	end
+end)
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
