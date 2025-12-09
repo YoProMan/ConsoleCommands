@@ -330,6 +330,34 @@ local function stopFly()
 	runService:UnbindFromRenderStep("FlyMovement")
 end
 
+local speedMulti = 1
+local character = game.Players.LocalPlayer.Character
+local playerSpeed = character.ControllerManager.BaseMoveSpeedVar
+task.spawn(function()
+	-- Binding speed
+	while task.wait() do
+		if playerSpeed.Value ~= 16 and playerSpeed.Value ~= 28 and playerSpeed.Value ~= 8 then warn("nah") else
+			playerSpeed.Value = playerSpeed.Value * speedMulti
+		end
+	end
+end)
+
+local multiplyr = 1
+local enemy = workspace.Neighbor.Neighbor
+local root = enemy:WaitForChild("RootPart")
+
+task.spawn(function()
+    while task.wait() do
+		if multiplyr ~= 1 then
+			local vel = root:GetAttribute("AssemblyLinearVelocity")
+			if vel then
+				root:SetAttribute("AssemblyLinearVelocity", vel * multiplier)
+			end
+		end
+	end
+end)
+
+
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
@@ -338,8 +366,11 @@ local NotificationsFrame = nil
 local PlaceholderNotification = nil
 
 local plr = game.Players.LocalPlayer
+local controllerManager = character.ControllerManager
 
 local keybind = Enum.KeyCode.Semicolon
+
+local defaultJumppower = 17.2
 
 local espon = false
 local espon2 = false
@@ -379,7 +410,13 @@ local commands = {
 		startFly()
 	end,
 	[";speed"] = function(args)
-		plr.Character.Humanoid.WalkSpeed = args[1]
+		speedMulti = args[1]
+	end,
+	[";jumppower"] = function(args)
+		controllerManager:SetAttribute("JumpImpulse", Vector3.new(0, defaultJumppower*args[1], 0))
+	end,
+	[";neighborspeed"] = function(args)
+		multiplyr = args[1]
 	end,
 }
 
