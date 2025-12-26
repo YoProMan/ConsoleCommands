@@ -102,11 +102,7 @@ function GetKeyNames()
 end
 
 function GiveItem(item)
-	if item:FindFirstChild("_link") then
-		item.Parent = game.Players.LocalPlayer.Backpack
-	else
-		warn("Invalid Item Given")
-	end
+	item.Parent = game.Players.LocalPlayer.Backpack
 end
 
 function ToggleNeighborESP(v)
