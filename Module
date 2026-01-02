@@ -353,6 +353,21 @@ task.spawn(function()
 	end
 end)
 
+function DisableBarrier()
+    local senv = getsenv(game.Players.LocalPlayer.Character.PlayableZone)
+    
+    local func = senv["isPointInPart"]
+    
+    local old; old = hookfunction(func, function(...)
+        local newFunction = function()
+            return true 
+        end
+        
+        return newFunction(...)
+    end) 
+
+	workspace.Border:Destroy()
+end
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -414,6 +429,9 @@ local commands = {
 	[";neighborspeed"] = function(args)
 		multiplyr = args[1]
 	end,
+	[";disablebarrier"] = function(args)
+		DisableBarrier()
+	end
 }
 
 function CreateNotification(title, desc)
